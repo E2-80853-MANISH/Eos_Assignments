@@ -1,78 +1,70 @@
+//. The child process send two numbers to the parent process via message queue.
+// The parent process calculate the sum and return via same message queue.
+//The child process print the result and exit. The parent process wait for completion of the child and then exit.
+
+
+
 #include<stdio.h>
 #include<unistd.h>
 #include<sys/wait.h>
-// parent A -> child B -> child C
+#include<stdlib.h>
+#include<sys/msg.h>
+
+#define MY_KEY   0x00001111
+typedef struct msg{
+    long type;
+    int num1,num2;
+}msg_t;
+
+typedef struct res{
+    long type;
+    int result;
+}res_t;
+
 int main()
- {
-    int i, pid1,pid2,pid3,pid4,pid5,s1,s2,s3,s4,s5;
-    pid1=fork();
-    if(pid1==0)
-    {
-    for(i=1; i<=5; i++) 
-    {
-        printf("A. %d\n", i);
-        sleep(1);
-    }
-       _exit(0);
-    }
-    pid2=fork();
-    if(pid2==0)
-    {
-    for(i=1; i<=5; i++) 
-    {
-        printf("B. %d\n", i);
-        sleep(1);
-    }
-       _exit(0);
-    }
-    pid3=fork();
-    if(pid3==0)
-    {
-    for(i=1; i<=5; i++) 
-    {
-        printf("C. %d\n", i);
-        sleep(1);
-    }
-       _exit(0);
-    }
-    pid4=fork();
-    if(pid4==0)
-    {
-    for(i=1; i<=5; i++) 
-    {
-        printf("D. %d\n", i);
-        sleep(1);
-    }
-       _exit(0);
-    }
-    pid5=fork();
-    if(pid5==0)
-    {
-    for(i=1; i<=5; i++) 
-    {
-        printf("e. %d\n", i);
-        sleep(1);
-    }
-       _exit(0);
-    }
+{
+    int i,ret,s,mqid;
+    msg_t m2;
+    res_t m1;
+     mqid=msgget(MY_KEY,IPC_CREAT|0600);
+     if(mqid<0){
+        printf("msgger() faild\n");
+        _exit(1);
+     }
 
-
-
-    {
-        for(i=1; i<=5; i++)
-     {
-        printf("parent. %d\n", i);
-        sleep(1);
-    }
-    
-waitpid(pid1,&s1,0);
-waitpid(pid2,&s2,0);
-waitpid(pid3,&s3,0);
-waitpid(pid4,&s4,0);
-waitpid(pid5,&s5,0);
-    }
-
+    ret=fork();
+    if(ret==0){
+        //child
         
-    return 0;
+          printf("Enter two numbers :");
+            scanf("%d%d",&m2.num1,&m2.num2);
+                 m2.type=100;
+                // m2.type=m2.num2;
+        msgsnd(mqid,&m2,sizeof(m2.type),0);
 
+        msgrcv(mqid,&m1,sizeof(m1.type),10,0);
+       printf("add succes");
+   
     }
+   else{
+    //parent
+    
+    printf("parent: wait for input\n");
+  
+
+    msgrcv(mqid,&m2,sizeof(m1.type),100,0);
+       m1.result=m2.num1+m2.num2;
+       printf("Sum : %d\n",m1.result);
+
+   m1.type=10;
+    msgsnd(mqid,&m1,sizeof(m1.result),0);
+
+    waitpid(-1,&s,0);
+    msgctl(mqid, IPC_RMID, NULL);
+   }
+
+
+
+
+    return 0;
+}
